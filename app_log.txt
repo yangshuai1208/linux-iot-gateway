@@ -1,0 +1,17 @@
+[2026-06-07 09:10:46][INFO]gateway applog start
+[2026-06-07 09:10:46][INFO]data source init success
+[2026-06-07 09:10:46][INFO]mqtt client init success
+[2026-06-07 09:10:48][INFO]parse sensor data success
+[2026-06-07 09:10:48][INFO]write sensor log success
+[2026-06-07 09:10:48][INFO]mqtt publish success
+[2026-06-07 09:10:50][INFO]parse sensor data success
+[2026-06-07 09:10:50][INFO]write sensor log success
+[2026-06-07 09:10:50][INFO]mqtt publish success
+[2026-06-07 09:10:52][WARN]parse sensor data failed
+[2026-06-07 09:10:54][INFO]parse sensor data success
+[2026-06-07 09:10:54][INFO]write sensor log success
+[2026-06-07 09:10:54][INFO]mqtt publish success
+[2026-06-07 09:10:56][INFO]parse sensor data success
+[2026-06-07 09:10:56][INFO]write sensor log success
+[2026-06-07 09:10:56][INFO]mqtt publish success
+[2026-06-07 09:10:56][INFO]gateway applog end
