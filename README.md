@@ -33,3 +33,19 @@ flowchart TD
     F --> J[本地日志文件]
 
     I --> K[云端 / 上位机 / 其他设备]
+    
+---
+
+
+```markdown
+## 编译与运行
+
+详细说明见：
+
+- [编译与运行说明](docs/build_run.md)
+- [测试记录](docs/test_record.md)
+
+基础编译：
+
+```bash
+make
