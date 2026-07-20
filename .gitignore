@@ -1,0 +1,14 @@
+# 编译输出
+*.o
+gateway_applog
+
+# 运行日志
+sensor_log.txt
+app_log.txt
+
+# 临时文件
+*.log
+*.tmp
+
+# 编辑器
+.vscode/
