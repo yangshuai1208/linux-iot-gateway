@@ -49,3 +49,37 @@ flowchart TD
 
 ```bash
 make
+### LogManager 构造函数与析构函数
+
+Day9 为 LogManager 增加了文件资源管理功能。
+
+对象生命周期：
+
+```text
+创建 LogManager 对象
+→ 构造函数打开日志文件
+→ log() 输出终端与文件日志
+→ 对象离开作用域
+→ 析构函数刷新并关闭日志文件
+```
+
+当前支持：
+
+- `INFO`、`WARNING`、`ERROR` 日志等级
+- 终端日志输出
+- 文件日志输出
+- 追加模式保存日志
+- 构造函数自动打开文件
+- 析构函数自动关闭文件
+- `isFileOpen()` 检查文件状态
+
+运行：
+
+```bash
+cd cpp_modules/log_manager
+make
+make run
+cat log_manager_demo.log
+```
+
+该模块通过 RAII 将日志文件的打开和关闭与对象生命周期绑定，降低忘记释放文件资源的风险。
