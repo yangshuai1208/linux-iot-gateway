@@ -12,3 +12,12 @@ app_log.txt
 
 # 编辑器
 .vscode/
+
+#C++ LogManager Demo 编译文件
+cpp_modules/log_manager/log_manager_demo
+cpp_modules/log_manager/*.o
+
+#C++ LogManager编译文件与运行日志
+cpp_modules/log_manager/log_manager_demo
+cpp_modules/log_manager/log_manager_demo.log
+cpp_modules/log_manager/*.o

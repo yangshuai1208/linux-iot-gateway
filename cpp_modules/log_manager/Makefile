@@ -18,3 +18,4 @@ run: $(TARGET)
 
 clean:
 	rm -f $(TARGET)
+	rm -f log_manager_demo.log

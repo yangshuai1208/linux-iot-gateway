@@ -2,7 +2,7 @@
 
 int main()
 {
-    LogManager logger;
+    LogManager logger("log_manager_demo.log");
 
     logger.log(LogLevel::Info,
                 "Linux Iot Gateway Start");

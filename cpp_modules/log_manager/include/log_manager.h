@@ -1,6 +1,7 @@
 #ifndef LOG_MANAGER_H
 #define LOG_MANAGER_H
 
+#include <fstream>
 #include <string>
 
 enum class LogLevel
@@ -13,10 +14,19 @@ enum class LogLevel
 class LogManager
 {
 public:
-    void log(LogLevel level, const std::string &message) const;
+    explicit LogManager(const std::string &filePath);
 
+    ~LogManager();
+    
+    void log(LogLevel level, const std::string &message);
+
+    bool isFileOpen() const;
 private:
     std::string levelToString(LogLevel level) const;
+
+    std::string filePath_;
+    std::ofstream logFile_;
+
 };
 
 #endif
