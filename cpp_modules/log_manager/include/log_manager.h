@@ -18,14 +18,23 @@ public:
 
     ~LogManager();
     
+    LogManager &setConsoleEnabled(bool enabled);
+
+    LogManager &setAutoFlush(bool enabled);
+
     void log(LogLevel level, const std::string &message);
 
     bool isFileOpen() const;
+
+    const std::string &getFiledPath() const;
 private:
     std::string levelToString(LogLevel level) const;
 
     std::string filePath_;
     std::ofstream logFile_;
+
+    bool consoleEnabled_;
+    bool autoFlush_;
 
 };
 

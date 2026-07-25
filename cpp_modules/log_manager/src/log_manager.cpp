@@ -4,7 +4,9 @@
 
 LogManager::LogManager(const std::string &filePath)
     :filePath_(filePath),
-    logFile_(filePath,std::ios::app)
+    logFile_(filePath,std::ios::app),
+    consoleEnabled_(true),
+    autoFlush_(true)
 {
     if(!logFile_.is_open())
     {
@@ -29,6 +31,18 @@ LogManager::~LogManager()
             <<'\n';
     }
 }
+LogManager &LogManager::setConsoleEnabled(bool enabled)
+{
+    this->consoleEnabled_=enabled;
+    return *this;
+}
+LogManager &LogManager::setAutoFlush(bool enabled)
+{
+    this->autoFlush_=enabled;
+
+    return *this;
+}
+
 std::string LogManager::levelToString(LogLevel level) const
 {
     switch (level)
@@ -46,17 +60,28 @@ std::string LogManager::levelToString(LogLevel level) const
 void LogManager::log(LogLevel level, const std::string &message)
 {
     const std::string line=
-    "["+levelToString(level)+"] "+message;
+    "["+this->levelToString(level)+"] "+message;
 
-    std::cout<<line<<'\n';
-
-    if(logFile_.is_open())
+    if(this->consoleEnabled_)
     {
-        logFile_<<line<<'\n';
-        logFile_.flush();
+        std::cout<<line<<'\n';
+    }
+    if(this->logFile_.is_open())
+    {
+        this->logFile_<<line<<'\n';
+    
+        if(this->autoFlush_)
+        {
+        this->logFile_.flush();
+        }
     }
 }
 bool LogManager::isFileOpen() const
 {
     return logFile_.is_open();
+}
+
+const std::string &LogManager::getFiledPath()const
+{
+    return this->filePath_;
 }
