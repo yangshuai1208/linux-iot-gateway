@@ -1,17 +1,16 @@
 #include "log_manager.h"
 
 #include <iostream>
+#include <string>
+#include <vector>
 
 int main()
 {
     LogManager logger("log_manager_demo.log");
 
     logger.setConsoleEnabled(true)
-        .setAutoFlush(true);
-
-    std::cout<<"[INFO] Current log file:"
-             <<logger.getFiledPath()
-             <<'\n';
+        .setAutoFlush(true)
+        .setMaxCachedLogs(3);
 
     
     if(!logger.isFileOpen())
@@ -20,8 +19,11 @@ int main()
                  <<'\n';
         return 1;
     }
+
     logger.log(LogLevel::Info,
                 "Linux Iot Gateway Start");
+    logger.log(LogLevel::Info,
+                "Sensor data received");
 
     logger.log(LogLevel::Warning,
                 "MQTT Broker is not connected");
@@ -29,16 +31,37 @@ int main()
 
     logger.log(LogLevel::Error,
                 "Failed to parse sensor data");
-        
-    logger.setConsoleEnabled(false);
-
+    
     logger.log(LogLevel::Info,
-    "This message is written only to file");
+                "Gateway is retrying");
 
-    logger.setConsoleEnabled(true);
+    const std::vector<std::string>&recentLogs=
+    logger.getRecentLogs();
 
-    logger.log(LogLevel::Info,
-            "Console output restored");
+    std::cout<<"[INFO] Cache log count:"
+    <<recentLogs.size()
+    <<'\n';
+
+    if(recentLogs.empty())
+    {
+        std::cout<<"[INFO] Recent log cache is empty"
+        <<'\n';
+    }
+    else
+    {
+        std::cout<<"[INFO] Recent logs:"
+        <<'\n';
+
+    for(const std::string &line:recentLogs)
+    {
+        std::cout<<""<<line<<'\n';
+    }
+    }
+    logger.clearRecentLogs();
+
+    std::cout<<"[INFO] Cached log count after clear"
+    <<logger.getRecentLogs().size()
+    <<'\n';
 
     return 0;
     

@@ -83,3 +83,68 @@ cat log_manager_demo.log
 ```
 
 该模块通过 RAII 将日志文件的打开和关闭与对象生命周期绑定，降低忘记释放文件资源的风险。
+
+### 引用、this 指针与链式配置
+
+Day10 为 LogManager 增加了运行参数配置功能：
+
+- 使用 `const std::string &` 避免日志消息复制
+- 使用 `this->` 明确访问当前对象成员
+- 使用 `return *this` 返回当前对象引用
+- 支持配置接口链式调用
+- 支持启用或关闭终端日志
+- 支持启用或关闭自动刷新
+- 支持只读查询日志文件路径
+
+链式配置示例：
+
+```cpp
+LogManager logger("gateway.log");
+
+logger.setConsoleEnabled(true)
+      .setAutoFlush(true);
+```
+
+当前模块已经覆盖：
+
+```text
+类与对象
+→ 构造函数和析构函数
+→ RAII 文件资源管理
+→ 引用传参
+→ this 指针
+→ 链式调用
+```
+### 最近日志缓存
+
+Day11 使用 `std::vector<std::string>` 为 LogManager 增加了最近日志缓存功能。
+
+当前支持：
+
+- 使用 `std::string` 构造日志文本
+- 使用 `std::vector` 保存最近日志
+- 使用 `push_back()` 添加日志
+- 使用 `size()` 和 `empty()` 查询缓存状态
+- 使用范围 `for` 循环遍历日志
+- 使用 `const` 引用避免容器复制
+- 支持配置最大缓存数量
+- 超过容量后自动删除最旧日志
+- 支持清空内存缓存
+
+示例：
+
+```cpp
+LogManager logger("gateway.log");
+
+logger.setMaxCachedLogs(3);
+
+const std::vector<std::string> &logs =
+    logger.getRecentLogs();
+
+for (const std::string &line : logs)
+{
+    std::cout << line << '\n';
+}
+```
+
+当前缓存使用 `vector::erase(begin())` 删除最旧元素，适合少量日志演示。高频或大容量场景后续可改为环形缓冲区。
