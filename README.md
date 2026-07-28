@@ -148,3 +148,28 @@ for (const std::string &line : logs)
 ```
 
 当前缓存使用 `vector::erase(begin())` 删除最旧元素，适合少量日志演示。高频或大容量场景后续可改为环形缓冲区。
+
+### 日志等级统计
+
+Day12 使用 `std::map<LogLevel, std::size_t>` 为 LogManager 增加了日志等级统计功能。
+
+当前支持：
+
+- 按 `INFO`、`WARNING`、`ERROR` 统计日志数量
+- 使用 `operator[]` 更新统计值
+- 使用 `find()` 查询指定等级
+- 使用范围 for 遍历所有统计结果
+- 使用 `const map&` 避免复制全部数据
+- 支持统计数据清零
+
+示例：
+
+```cpp
+logger.log(LogLevel::Info, "Gateway started");
+logger.log(LogLevel::Error, "Parse failed");
+
+std::size_t errorCount =
+    logger.getLogCount(LogLevel::Error);
+```
+
+当前使用 `std::map` 主要用于学习键值映射。在日志等级固定、性能要求更高的场景中，可以使用 `std::array` 或固定数组优化内存和访问效率。

@@ -3,6 +3,7 @@
 
 #include <cstddef>
 #include <fstream>
+#include <map>
 #include <string>
 #include <vector>
 
@@ -19,22 +20,32 @@ public:
     explicit LogManager(const std::string &filePath);
 
     ~LogManager();
-    
+
     LogManager &setConsoleEnabled(bool enabled);
 
     LogManager &setAutoFlush(bool enabled);
 
     LogManager &setMaxCachedLogs(std::size_t maxCount);
 
-    void log(LogLevel level, const std::string &message);
+    void log(LogLevel level,
+             const std::string &message);
 
     bool isFileOpen() const;
 
-    const std::string &getFiledPath() const;
+    const std::string &getFilePath() const;
 
-    const std::vector<std::string> &getRecentLogs()const;
+    const std::vector<std::string> &
+    getRecentLogs() const;
 
     void clearRecentLogs();
+
+    std::size_t getLogCount(LogLevel level) const;
+
+    const std::map<LogLevel, std::size_t> &
+    getAllLogCounts() const;
+
+    void resetLogCounts();
+
 private:
     std::string levelToString(LogLevel level) const;
 
@@ -49,6 +60,7 @@ private:
     std::size_t maxCachedLogs_;
     std::vector<std::string> recentLogs_;
 
+    std::map<LogLevel, std::size_t> logCounts_;
 };
 
 #endif
