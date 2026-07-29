@@ -173,3 +173,52 @@ std::size_t errorCount =
 ```
 
 当前使用 `std::map` 主要用于学习键值映射。在日志等级固定、性能要求更高的场景中，可以使用 `std::array` 或固定数组优化内存和访问效率。
+
+### ProtocolParser 协议解析模块
+
+Day13 新增独立的 C++ 文本协议解析模块：
+
+```text
+cpp_modules/protocol_parser/
+```
+
+当前支持：
+
+- `OPEN`
+- `GRAB`
+- `RELEASE`
+- `STOP`
+- 非法命令识别
+- 首尾空格、Tab、回车和换行清洗
+- 大小写统一
+- 文本命令转 `Command` 枚举
+- `Command` 枚举转 `HAND_*` 执行命令
+
+处理流程：
+
+```text
+原始文本
+→ 输入清洗
+→ 大写转换
+→ map 查找
+→ Command 枚举
+→ HAND_* 命令
+```
+
+示例：
+
+```text
+" grab\r\n"
+→ Command::Grab
+→ HAND_GRAB
+```
+
+运行：
+
+```bash
+cd cpp_modules/protocol_parser
+make
+make run
+```
+
+未知命令统一转换为 `Command::Unknown` 和 `HAND_NONE`，避免非法输入直接驱动执行端。
