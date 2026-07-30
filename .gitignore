@@ -25,3 +25,8 @@ cpp_modules/log_manager/*.o
 #C++ ProtocolParser编译文件
 cpp_modules/protocol_parser/protocol_parser_demo
 cpp_modules/protocol_parser/*.o
+
+#C++ 集成Demo
+cpp_modules/integration_demo/gateway_cpp_demo
+cpp_modules/integration_demo/gateway_cpp_demo.log
+cpp_modules/integration_demo/*.o
