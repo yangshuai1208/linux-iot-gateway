@@ -222,3 +222,50 @@ make run
 ```
 
 未知命令统一转换为 `Command::Unknown` 和 `HAND_NONE`，避免非法输入直接驱动执行端。
+
+### C++ 多线程基础 Demo
+
+Day15 新增：
+
+```text
+cpp_modules/thread_demo/
+```
+
+该模块使用 `std::thread` 创建采集线程和处理线程：
+
+```text
+采集线程
+→ 模拟生成传感器数据
+→ 原子状态通知
+
+处理线程
+→ 检查新数据
+→ 处理传感器值
+
+主线程
+→ join 等待线程结束
+→ 安全退出
+```
+
+当前涉及：
+
+- `std::thread`
+- `join()`
+- `joinable()`
+- 线程 ID
+- `std::this_thread::sleep_for()`
+- `std::atomic`
+- `load()`、`store()`、`exchange()`
+- `-pthread` 编译参数
+
+运行方法：
+
+```bash
+cd cpp_modules/thread_demo
+make
+make run
+```
+
+当前使用单槽共享数据和轮询，仅用于线程基础验证。后续将使用 `std::mutex`、`std::condition_variable` 和队列实现更完整的线程通信。
+
+现有 LogManager 暂未声明为线程安全模块，不能直接由多个线程同时调用。

@@ -30,3 +30,7 @@ cpp_modules/protocol_parser/*.o
 cpp_modules/integration_demo/gateway_cpp_demo
 cpp_modules/integration_demo/gateway_cpp_demo.log
 cpp_modules/integration_demo/*.o
+
+#C++ Thread Demo
+cpp_modules/thread_demo/thread_demo
+cpp_modules/thread_demo/*.o
