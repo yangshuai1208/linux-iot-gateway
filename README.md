@@ -269,3 +269,63 @@ make run
 当前使用单槽共享数据和轮询，仅用于线程基础验证。后续将使用 `std::mutex`、`std::condition_variable` 和队列实现更完整的线程通信。
 
 现有 LogManager 暂未声明为线程安全模块，不能直接由多个线程同时调用。
+
+### 线程安全 LogManager
+
+Day16 为 `LogManager` 增加了线程同步保护。
+
+涉及：
+
+- `std::mutex`
+- `std::lock_guard`
+- `mutable mutex`
+- 临界区
+- 数据竞争
+- 线程安全查询
+- `std::ref`
+- 多线程日志测试
+
+并发测试流程：
+
+```text
+collector 线程 ─┐
+                ├→ 共享 LogManager
+processor 线程 ─┘
+```
+
+一次日志操作会在同一临界区内完成：
+
+```text
+终端输出
+→ 文件写入
+→ 最近日志缓存
+→ 等级统计
+```
+
+为了避免容器内部引用在锁释放后逃逸，以下接口改为返回副本：
+
+```cpp
+std::vector<std::string> getRecentLogs() const;
+std::map<LogLevel, std::size_t>
+getAllLogCounts() const;
+```
+
+运行：
+
+```bash
+cd cpp_modules/thread_safe_log_demo
+make clean
+make
+make run
+```
+
+预期统计：
+
+```text
+INFO=5
+WARNING=5
+ERROR=0
+cached_logs=10
+```
+
+当前要求所有使用 LogManager 的工作线程在对象析构前完成 join。

@@ -34,3 +34,8 @@ cpp_modules/integration_demo/*.o
 #C++ Thread Demo
 cpp_modules/thread_demo/thread_demo
 cpp_modules/thread_demo/*.o
+
+# C++ Thread-safe Log Demo
+cpp_modules/thread_safe_log_demo/thread_safe_log_demo
+cpp_modules/thread_safe_log_demo/thread_safe_log_demo.log
+cpp_modules/thread_safe_log_demo/*.o

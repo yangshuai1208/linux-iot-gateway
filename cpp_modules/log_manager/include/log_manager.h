@@ -4,6 +4,7 @@
 #include <cstddef>
 #include <fstream>
 #include <map>
+#include <mutex>
 #include <string>
 #include <vector>
 
@@ -34,14 +35,14 @@ public:
 
     const std::string &getFilePath() const;
 
-    const std::vector<std::string> &
+    std::vector<std::string> 
     getRecentLogs() const;
 
     void clearRecentLogs();
 
     std::size_t getLogCount(LogLevel level) const;
 
-    const std::map<LogLevel, std::size_t> &
+    std::map<LogLevel, std::size_t> 
     getAllLogCounts() const;
 
     void resetLogCounts();
@@ -61,6 +62,8 @@ private:
     std::vector<std::string> recentLogs_;
 
     std::map<LogLevel, std::size_t> logCounts_;
+
+    mutable std::mutex mutex_;
 };
 
 #endif

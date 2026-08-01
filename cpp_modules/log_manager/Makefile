@@ -1,5 +1,5 @@
 CXX := g++
-CXXFLAGS := -std=c++17 -Wall -Wextra -Werror -I$(CURDIR)/include
+CXXFLAGS := -std=c++17 -Wall -Wextra -Werror -pthread -I$(CURDIR)/include
 
 TARGET := log_manager_demo
 
