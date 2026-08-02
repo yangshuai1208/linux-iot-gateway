@@ -329,3 +329,53 @@ cached_logs=10
 ```
 
 当前要求所有使用 LogManager 的工作线程在对象析构前完成 join。
+
+### C++ 生产者消费者模型
+
+Day17 新增：
+
+```text
+cpp_modules/producer_consumer_demo/
+```
+
+使用：
+
+- `std::queue`
+- `std::mutex`
+- `std::unique_lock`
+- `std::condition_variable`
+- `wait()`
+- `notify_one()`
+- `notify_all()`
+
+数据流：
+
+```text
+采集线程
+→ SensorSample
+→ 线程安全 queue
+→ condition_variable 通知
+→ 数据处理线程
+```
+
+与早期 atomic 单槽轮询方案相比：
+
+```text
+轮询 + sleep
+```
+
+升级为：
+
+```text
+阻塞等待 + 主动唤醒
+```
+
+运行：
+
+```bash
+cd cpp_modules/producer_consumer_demo
+make
+make run
+```
+
+当前 Demo 使用单生产者、单消费者结构，后续计划接入 Linux IoT Gateway 的真实协议处理流程。
