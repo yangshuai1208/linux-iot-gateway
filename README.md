@@ -379,3 +379,56 @@ make run
 ```
 
 当前 Demo 使用单生产者、单消费者结构，后续计划接入 Linux IoT Gateway 的真实协议处理流程。
+
+### C++ 多线程网关最小闭环
+
+Day18 将此前的 C++ 模块进行最小业务集成：
+
+```text
+模拟 UART/MQTT 输入线程
+        ↓
+线程安全命令队列
+        ↓
+condition_variable
+        ↓
+协议处理线程
+        ↓
+ProtocolParser
+        ↓
+Command / HAND_*
+        ↓
+线程安全 LogManager
+```
+
+涉及：
+
+- `std::thread`
+- `std::queue`
+- `std::mutex`
+- `std::lock_guard`
+- `std::unique_lock`
+- `std::condition_variable`
+- `std::ref`
+- `ProtocolParser`
+- 线程安全 `LogManager`
+
+测试：
+
+```text
+OPEN       → HAND_OPEN
+GRAB       → HAND_GRAB
+JUMP       → Reject
+STOP       → HAND_STOP
+RELEASE    → HAND_RELEASE
+```
+
+运行：
+
+```bash
+cd cpp_modules/gateway_pipeline_demo
+make clean
+make
+make run
+```
+
+当前属于模拟输入下的 C++ 并发网关验证模块，尚未正式接入真实 UART、TCP 或 MQTT 数据源。

@@ -39,3 +39,8 @@ cpp_modules/thread_demo/*.o
 cpp_modules/thread_safe_log_demo/thread_safe_log_demo
 cpp_modules/thread_safe_log_demo/thread_safe_log_demo.log
 cpp_modules/thread_safe_log_demo/*.o
+
+#C++ Gateway Pipeline Demo
+cpp_modules/gateway_pipeline_demo/gateway_pipeline_demo
+cpp_modules/gateway_pipeline_demo/gateway_pipeline_demo.log
+cpp_modules/gateway_pipeline_demo/*.o
