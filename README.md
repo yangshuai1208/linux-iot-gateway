@@ -432,3 +432,43 @@ make run
 ```
 
 当前属于模拟输入下的 C++ 并发网关验证模块，尚未正式接入真实 UART、TCP 或 MQTT 数据源。
+
+### 结构化命令与 ACK Demo
+
+Day19 在多线程命令处理闭环基础上增加结构化请求和状态反馈。
+
+```text
+RawCommand
+├── sequence
+├── source
+└── payload
+        ↓
+ProtocolParser
+        ↓
+Command / HAND_*
+        ↓
+CommandResult
+        ↓
+ACK / ERROR
+```
+
+示例：
+
+```text
+seq=1 OPEN
+→ ACK seq=1 code=0 HAND_OPEN
+
+seq=3 JUMP
+→ ERROR seq=3 code=1001 INVALID_COMMAND
+```
+
+当前 ACK 表示 Linux 网关侧完成协议解析与指令映射，并非 STM32 实际执行反馈。
+
+运行：
+
+```bash
+cd cpp_modules/gateway_ack_demo
+make clean
+make
+make run
+```

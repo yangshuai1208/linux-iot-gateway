@@ -44,3 +44,8 @@ cpp_modules/thread_safe_log_demo/*.o
 cpp_modules/gateway_pipeline_demo/gateway_pipeline_demo
 cpp_modules/gateway_pipeline_demo/gateway_pipeline_demo.log
 cpp_modules/gateway_pipeline_demo/*.o
+
+# C++ Gateway ACK Demo
+cpp_modules/gateway_ack_demo/gateway_ack_demo
+cpp_modules/gateway_ack_demo/gateway_ack_demo.log
+cpp_modules/gateway_ack_demo/*.o
