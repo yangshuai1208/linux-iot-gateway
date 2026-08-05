@@ -471,4 +471,19 @@ cd cpp_modules/gateway_ack_demo
 make clean
 make
 make run
-```
+
+
+### ACK 超时与重试
+
+Day20 增加 ACK 超时检测和简单重试：
+
+```text
+Command
+→ sequence
+→ send
+→ wait_for ACK
+→ success
+
+timeout
+→ retry
+→ ACK / FAILED
