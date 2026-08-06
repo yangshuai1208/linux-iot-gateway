@@ -49,3 +49,7 @@ cpp_modules/gateway_pipeline_demo/*.o
 cpp_modules/gateway_ack_demo/gateway_ack_demo
 cpp_modules/gateway_ack_demo/gateway_ack_demo.log
 cpp_modules/gateway_ack_demo/*.o
+
+# C++ Serial Frame Demo
+cpp_modules/serial_frame_demo/serial_frame_demo
+cpp_modules/serial_frame_demo/*.o

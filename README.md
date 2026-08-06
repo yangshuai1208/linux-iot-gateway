@@ -487,3 +487,15 @@ Command
 timeout
 → retry
 → ACK / FAILED
+
+### 二进制串口协议实验
+
+Day21 实现二进制协议帧编码、解码和流式解析：
+
+```text
+AA 55
+LEN
+SEQ_H SEQ_L
+CMD
+CHECKSUM
+0D 0A
