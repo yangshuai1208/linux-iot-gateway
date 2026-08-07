@@ -499,3 +499,18 @@ SEQ_H SEQ_L
 CMD
 CHECKSUM
 0D 0A
+
+### Sequence 去重与重复请求处理
+
+Day22 针对 ACK 丢失后的重传问题增加请求去重机制。
+
+```text
+Request seq=3
+→ execute
+→ cache ACK
+→ ACK lost
+
+Retry seq=3
+→ duplicate detected
+→ skip execution
+→ resend cached ACK

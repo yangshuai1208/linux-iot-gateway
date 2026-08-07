@@ -53,3 +53,7 @@ cpp_modules/gateway_ack_demo/*.o
 # C++ Serial Frame Demo
 cpp_modules/serial_frame_demo/serial_frame_demo
 cpp_modules/serial_frame_demo/*.o
+
+# Reliable Serial Demo
+cpp_modules/reliable_serial_demo/reliable_serial_demo
+cpp_modules/reliable_serial_demo/*.o
