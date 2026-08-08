@@ -514,3 +514,16 @@ Retry seq=3
 → duplicate detected
 → skip execution
 → resend cached ACK
+## C++17 网关增强实验
+
+为验证 Linux IoT Gateway 后续 C++ 化方案，增加了一组独立实验模块。
+
+### 并发处理
+
+```text
+Input Producer
+→ thread-safe queue
+→ condition_variable
+→ Command Consumer
+→ ProtocolParser
+→ LogManager
