@@ -527,3 +527,19 @@ Input Producer
 → Command Consumer
 → ProtocolParser
 → LogManager
+
+### 当前实现边界
+
+原始 Linux IoT Gateway 主链路已实现数据源抽象、协议解析、JSON 转换、日志记录和 MQTT 发布。
+
+C++17 目录主要用于后续架构增强实验，包括：
+
+- ProtocolParser
+- Thread-safe LogManager
+- Producer / Consumer
+- ACK / sequence
+- timeout / retry
+- binary frame
+- duplicate detection
+
+其中可靠通信及二进制协议模块目前主要在 Linux 模拟环境完成验证，尚未全部集成到真实 UART + STM32 链路。
