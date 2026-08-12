@@ -543,3 +543,22 @@ C++17 目录主要用于后续架构增强实验，包括：
 - duplicate detection
 
 其中可靠通信及二进制协议模块目前主要在 Linux 模拟环境完成验证，尚未全部集成到真实 UART + STM32 链路。
+
+### C++ RAII 与资源所有权实验
+
+Day25 增加智能指针与 RAII 实验，结合网关资源管理理解：
+
+- `std::unique_ptr`
+- `std::shared_ptr`
+- `std::weak_ptr`
+- `std::make_unique`
+- `std::make_shared`
+- `std::move`
+- RAII
+- 资源所有权
+
+实验中使用 `unique_ptr` 表示串口对象唯一所有权，
+使用 `shared_ptr` 表示共享配置生命周期，
+并通过 `weak_ptr` 实现非拥有型观察。
+
+该模块用于 C++17 资源管理知识验证。
