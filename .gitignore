@@ -57,3 +57,15 @@ cpp_modules/serial_frame_demo/*.o
 # Reliable Serial Demo
 cpp_modules/reliable_serial_demo/reliable_serial_demo
 cpp_modules/reliable_serial_demo/*.o
+
+# Smart Pointer Demo
+cpp_modules/smart_pointer_demo/smart_pointer_demo
+cpp_modules/smart_pointer_demo/*.o
+
+# Move semantics demo
+cpp_modules/move_semantics_demo/move_semantics_demo
+cpp_modules/move_semantics_demo/*.o
+
+#Lambda Algorithm Demo
+cpp_modules/lambda_algorithm_demo/lambda_algorithm_demo
+cpp_modules/lambda_algorithm_demo/*.o

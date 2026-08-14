@@ -583,3 +583,23 @@ Day25 增加智能指针与 RAII 实验，结合网关资源管理理解：
 实验通过自定义 Buffer 资源类，对比深拷贝和资源所有权转移过程。
 
 实际网关代码仍优先使用 STL、智能指针及 RAII 类型管理资源。
+
+### Lambda 与 STL Algorithm 实验
+
+增加 `lambda_algorithm_demo`，用于复习：
+
+- Lambda 表达式
+- 值捕获 / 引用捕获
+- Predicate
+- `std::for_each`
+- `std::transform`
+- `std::find_if`
+- `std::count_if`
+
+实验模拟网关命令记录，对命令进行标准化、查找和状态统计。
+
+这些知识同时应用于：
+
+- ProtocolParser 命令标准化
+- condition_variable 条件谓词
+- 网关状态筛选与统计
