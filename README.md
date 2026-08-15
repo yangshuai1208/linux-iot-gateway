@@ -603,3 +603,18 @@ Day25 增加智能指针与 RAII 实验，结合网关资源管理理解：
 - ProtocolParser 命令标准化
 - condition_variable 条件谓词
 - 网关状态筛选与统计
+
+1. log_manager
+线程安全日志
+
+2. protocol_parser
+命令解析
+
+3. gateway_pipeline_demo
+Producer / Consumer
+
+4. gateway_timeout_demo
+ACK + timeout + retry
+
+5. reliable_serial_demo
+sequence dedup + cached ACK
