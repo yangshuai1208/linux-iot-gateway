@@ -618,3 +618,26 @@ ACK + timeout + retry
 
 5. reliable_serial_demo
 sequence dedup + cached ACK
+
+
+## 二、更新`linux-iot-gateway/README.md`
+
+追加：
+
+```markdown
+### 第六阶段 Day 3：Linux Gateway与串口数据源复习
+
+本次复习和改进内容：
+
+- 复盘ESP32-S3、Linux Gateway、STM32F407三端职责
+- 修复传感器JSON格式和缓冲区截断问题
+- 增加数据解析和JSON构造单元测试
+- 补充Linux串口`open/read/close/termios`逻辑
+- 复习115200、8N1、`VMIN/VTIME`
+- 复习MQTT QoS、消息去重和断线缓存设计
+- 分析串口半包、粘包、CRC和状态机方案
+
+验证结果：
+
+```text
+sensor parser tests passed
