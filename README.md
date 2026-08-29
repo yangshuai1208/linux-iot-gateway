@@ -641,3 +641,19 @@ sequence dedup + cached ACK
 
 ```text
 sensor parser tests passed
+
+```markdown
+### Day 10：TCP分帧与MQTT可靠性
+
+- 复习TCP字节流、粘包与拆包问题。
+- 复习`send()`、`recv()`返回值和非阻塞错误处理。
+- 实现长度字段二进制协议解析状态机。
+- 支持帧头同步、长度检查、Payload接收和异或校验。
+- 增加错误长度、错误校验、连续帧和噪声恢复测试。
+- 审查Linux网关MQTT模块的QoS、网络循环和断线恢复问题。
+- 总结有界离线队列、指数退避、随机抖动和消息幂等设计。
+
+验证结果：
+
+```text
+length-prefixed framer tests passed
