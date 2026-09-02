@@ -657,3 +657,14 @@ sensor parser tests passed
 
 ```text
 length-prefixed framer tests passed
+
+## Day14：PCA9685舵机映射单元测试
+
+新增`test/day14_servo_angle_to_count.c`，验证舵机角度到PCA9685 PWM计数值的映射逻辑。
+
+- 使用50Hz、20ms周期和12位PWM分辨率。
+- 覆盖0°、90°、180°及非法参数测试。
+- 参数错误时保证不修改输出参数。
+- 测试已通过：`Servo angle conversion tests passed`。
+
+> 该文件是可复用的控制算法单元测试，用于验证PCA9685计数计算；不代表Linux网关当前直接驱动舵机硬件。
