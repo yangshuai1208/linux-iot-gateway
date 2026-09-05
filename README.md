@@ -921,3 +921,49 @@ Day16 pthread producer-consumer tests passed
 Day16 valid brackets tests passed
 实现边界：以上代码属于Linux主机侧独立并发与算法实验，用于验证pthread、有界队列、线程同步和数组栈。相关并发结构尚未全部接入真实UART、TCP、MQTT与STM32主链路，不能描述为已经完成的硬件端到端多线程网关。
 
+### 第六阶段 Day17：Socket、I/O多路复用与串口阻塞复习
+
+新增Linux主机侧实验：
+
+```text
+test/day17_send_all.c
+test/day17_select_echo_server.c
+```
+
+本次完成：
+
+- 复习TCP可靠字节流与UDP数据报的区别。
+- 实现阻塞版`SendAll()`，处理短写、发送偏移、`EINTR`和对端关闭。
+- 使用`MSG_NOSIGNAL`避免向关闭连接发送时由`SIGPIPE`终止进程。
+- 复习`recv()`的正数、0、`EINTR`和`EAGAIN/EWOULDBLOCK`语义。
+- 复习TCP半包、粘包，以及累计缓冲区和循环分帧方法。
+- 使用`select()`实现单线程多客户端Echo Server。
+- 掌握`master_set`、`read_set`、`FD_SET`、`FD_ISSET`、`FD_CLR`和`max_fd`维护。
+- 对比`select()`与`epoll`，复习LT和ET触发模式。
+- 复习Linux串口Raw模式、115200 8N1和四组`VMIN/VTIME`行为。
+- 分析有界队列过载、MQTT回调阻塞和串口线程安全退出方案。
+
+编译与运行：
+
+```bash
+gcc -std=c11 -Wall -Wextra -Wpedantic -Werror ./test/day17_send_all.c -o ./test/day17_send_all
+./test/day17_send_all
+
+gcc -std=c11 -Wall -Wextra -Wpedantic -Werror ./test/day17_select_echo_server.c -o ./test/day17_select_echo_server
+./test/day17_select_echo_server
+```
+
+另开WSL终端连接Echo Server：
+
+```bash
+nc 127.0.0.1 9090
+```
+
+验证结果：
+
+```text
+Day17 send_all tests passed
+select Echo Server多客户端收发测试通过
+```
+
+> 实现边界：以上代码属于Linux主机侧Socket与I/O多路复用实验。`SendAll()`当前为阻塞版，Echo Server尚未加入业务分帧、发送缓存和非阻塞写状态机；相关结构尚未全部接入真实UART、MQTT与STM32端到端链路。

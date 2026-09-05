@@ -69,3 +69,6 @@ cpp_modules/move_semantics_demo/*.o
 #Lambda Algorithm Demo
 cpp_modules/lambda_algorithm_demo/lambda_algorithm_demo
 cpp_modules/lambda_algorithm_demo/*.o
+
+/test/day17_send_all
+/test/day17_select_echo_server
