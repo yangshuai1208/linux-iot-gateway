@@ -16,25 +16,6 @@
 - 支持模块化代码结构
 - 为后续 AIoT 智能眼镜 + 灵动手控制系统提供网关基础
 
-## 系统架构
-
-```mermaid
-flowchart TD
-    A[STM32 下位机] -->|UART 串口| B[Linux IoT Gateway]
-
-    B --> C[serial 模块]
-    B --> D[tcp_server 模块]
-    B --> E[mqtt_client 模块]
-    B --> F[log 模块]
-
-    C --> G[解析串口数据]
-    D --> H[TCP 客户端]
-    E --> I[MQTT Broker]
-    F --> J[本地日志文件]
-
-    I --> K[云端 / 上位机 / 其他设备]
-    
----
 
 
 ```markdown
