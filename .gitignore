@@ -72,3 +72,14 @@ cpp_modules/lambda_algorithm_demo/*.o
 
 /test/day17_send_all
 /test/day17_select_echo_server
+
+# 本地编译产物
+build/
+*.o
+day18_ack_retry
+day18_sequence_dedup
+test/day16_pthread_producer_consumer
+test/day16_valid_brackets
+test/day19_command_dispatch
+test/day19_rotate_array
+test/test_sensor_parser
