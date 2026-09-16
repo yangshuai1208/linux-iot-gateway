@@ -96,3 +96,48 @@ condition_variable 安全退出
 lock_guard / unique_lock
 GDB core dump 定位
 Makefile 增量编译
+
+
+## 4. ROS2 最小控制节点
+
+### 实现位置
+
+```text
+ros2_ws/src/hand_bridge/
+当前闭环
+ROS2 Publisher
+→ /hand_command
+→ hand_bridge_node
+→ command_callback()
+→ OPEN / GRAB / RELEASE / STOP
+今日验证
+
+已使用：
+
+ros2 topic pub --once /hand_command std_msgs/msg/String "{data: 'GRAB'}"
+
+以及：
+
+ros2 topic pub --once /hand_command std_msgs/msg/String "{data: 'STOP'}"
+
+节点成功接收到对应控制命令。
+
+当前项目状态
+
+目前 ROS2 节点只完成 Topic 订阅和命令合法性判断。
+
+尚未接入：
+
+Linux UART
+ProtocolParser
+STM32F407
+/hand_status 状态反馈
+
+后续目标：
+
+/hand_command
+→ hand_bridge_node
+→ Linux UART
+→ STM32F407
+→ PCA9685
+→ MG90S
