@@ -230,9 +230,7 @@ for (uint32_t step = 1U;
         random_value %
         (jitter_limit + 1U);
     }
-    *delay_ms = base_delay + jitter;
 
-    return true;
 
 
 
@@ -245,7 +243,9 @@ for (uint32_t step = 1U;
      *
      * 成功时才修改delay_ms并返回true。
      */
+        *delay_ms = base_delay + jitter;
 
+     return true;
 
 }
 

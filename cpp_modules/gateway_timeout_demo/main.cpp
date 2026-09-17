@@ -254,7 +254,7 @@ void commandSender(
         "Command sender finished");
 }
 
-} // namespace
+} 
 
 int main()
 {
