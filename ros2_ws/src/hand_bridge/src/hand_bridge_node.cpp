@@ -97,11 +97,18 @@ private:
 
         current_state_ = msg->data;
 
+        const std::string uart_command=map_to_uart_command(msg->data);
 
-        RCLCPP_INFO(
-            this->get_logger(),
-            "Received command: %s",
-            current_state_.c_str());
+
+    RCLCPP_INFO(
+        this->get_logger(),
+        "Received command: %s",
+        current_state_.c_str());
+
+    RCLCPP_INFO(
+        this->get_logger(),
+        "Mapped UART command: %s",
+        uart_command.c_str());
     }
 
 
@@ -126,6 +133,27 @@ private:
             this->get_logger(),
             "Status requested: %s",
             current_state_.c_str());
+    }
+
+    std::string map_to_uart_command(const std::string &cmd)
+    {
+        if(cmd=="OPEN")
+        {
+            return "HAND_OPEN\r\n";
+        }
+        if(cmd=="GRAB")
+        {
+            return "HAND_GRAB\r\n";
+        }
+        if(cmd=="RELEASE")
+        {
+            return "HAND_RELEASE\r\n";
+        }
+        if(cmd=="STOP")
+        {
+            return "HAND_STOP\r\n";
+        }
+        return "";
     }
 
 
