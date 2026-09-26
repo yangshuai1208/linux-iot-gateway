@@ -27,6 +27,13 @@ endif()
 add_executable(
   hand_bridge_node
   src/hand_bridge_node.cpp
+  src/ack_parser.cpp
+)
+
+target_include_directories(
+  hand_bridge_node
+  PRIVATE
+  include
 )
 
 ament_target_dependencies(

@@ -1,70 +1,66 @@
+
+#include <atomic>
 #include <cerrno>
+#include <chrono>
 #include <condition_variable>
-#include <cstring>
 #include <cstdint>
+#include <cstring>
+#include <deque>
 #include <fcntl.h>
 #include <functional>
 #include <memory>
 #include <mutex>
-#include <queue>
 #include <string>
 #include <termios.h>
 #include <thread>
 #include <unistd.h>
+#include <vector>
 
 #include "rclcpp/rclcpp.hpp"
 #include "std_msgs/msg/string.hpp"
 #include "std_srvs/srv/trigger.hpp"
 
+#include "hand_bridge/ack_parser.hpp"
+#include "hand_bridge/retry_policy.hpp"
 
 class HandBridgeNode : public rclcpp::Node
 {
 public:
     HandBridgeNode()
-        : Node("hand_bridge_node"),
-          current_state_("STOP")
+        : Node("hand_bridge_node")
     {
-        /* 1. 声明参数 */
         this->declare_parameter<std::string>(
-            "uart_port",
-            "/dev/ttyUSB0");
+            "uart_port", "/dev/ttyUSB0");
 
         this->declare_parameter<int64_t>(
-            "baud_rate",
-            115200);
+            "baud_rate", 115200);
 
-        /* 2. 获取参数 */
         uart_port_ =
-            this->get_parameter(
-                "uart_port").as_string();
+            this->get_parameter("uart_port").as_string();
 
         baud_rate_ =
-            this->get_parameter(
-                "baud_rate").as_int();
+            this->get_parameter("baud_rate").as_int();
 
-        /*
-         * 3. 打开UART。
-         * UART失败不让整个ROS节点退出。
-         */
-        if (!open_uart())
+        if (open_uart())
         {
-            RCLCPP_WARN(
-                this->get_logger(),
-                "UART is unavailable, "
-                "ROS node will continue running");
+            tx_thread_ = std::thread(
+                &HandBridgeNode::uart_tx_worker, this);
+
+            rx_thread_ = std::thread(
+                &HandBridgeNode::uart_rx_worker, this);
+
+            retry_thread_ = std::thread(
+                &HandBridgeNode::retry_worker, this);
         }
         else
         {
-            tx_thread_ =
-                std::thread(
-                    &HandBridgeNode::uart_tx_worker,
-                    this);
+            RCLCPP_WARN(
+                this->get_logger(),
+                "UART unavailable, ROS node continues");
         }
 
-        /* 4. Topic订阅 */
         command_sub_ =
-            this->create_subscription<
-                std_msgs::msg::String>(
+            this->create_subscription<std_msgs::msg::String>(
                 "/hand_command",
                 10,
                 std::bind(
@@ -72,10 +68,8 @@ public:
                     this,
                     std::placeholders::_1));
 
-        /* 5. Service */
         status_service_ =
-            this->create_service<
-                std_srvs::srv::Trigger>(
+            this->create_service<std_srvs::srv::Trigger>(
                 "/hand_status",
                 std::bind(
                     &HandBridgeNode::status_callback,
@@ -85,41 +79,40 @@ public:
 
         RCLCPP_INFO(
             this->get_logger(),
-            "Hand bridge node started");
-
-        RCLCPP_INFO(
-            this->get_logger(),
-            "UART port=%s, baud=%ld",
+            "Hand bridge started, port=%s, baud=%ld",
             uart_port_.c_str(),
             static_cast<long>(baud_rate_));
     }
 
-
-    ~HandBridgeNode()
+    ~HandBridgeNode() override
     {
-        /*
-         * 通知TX线程退出
-         */
+        retry_stop_.store(true);
+        rx_stop_.store(true);
+
         {
-            std::lock_guard<std::mutex> lock(
-                queue_mutex_);
+            std::lock_guard<std::mutex> lock(queue_mutex_);
 
             stop_worker_ = true;
+            command_queue_.clear();
         }
 
         queue_cv_.notify_all();
 
-        /*
-         * 等待线程结束
-         */
+        if (retry_thread_.joinable())
+        {
+            retry_thread_.join();
+        }
+
         if (tx_thread_.joinable())
         {
             tx_thread_.join();
         }
 
-        /*
-         * 关闭文件描述符
-         */
+        if (rx_thread_.joinable())
+        {
+            rx_thread_.join();
+        }
+
         if (uart_fd_ >= 0)
         {
             ::close(uart_fd_);
@@ -127,11 +120,8 @@ public:
         }
     }
 
-
 private:
-
-    bool valid_command(
-        const std::string &cmd)
+    static bool valid_command(const std::string &cmd)
     {
         return cmd == "OPEN" ||
                cmd == "GRAB" ||
@@ -139,33 +129,81 @@ private:
                cmd == "STOP";
     }
 
-
-    std::string map_to_uart_command(
-        const std::string &cmd)
+    static std::string map_to_uart_command(
+        const std::string &cmd,
+        std::uint32_t seq)
     {
+        std::string action;
+
         if (cmd == "OPEN")
         {
-            return "HAND_OPEN\r\n";
+            action = "HAND_OPEN";
         }
-
-        if (cmd == "GRAB")
+        else if (cmd == "GRAB")
         {
-            return "HAND_GRAB\r\n";
+            action = "HAND_GRAB";
         }
-
-        if (cmd == "RELEASE")
+        else if (cmd == "RELEASE")
         {
-            return "HAND_RELEASE\r\n";
+            action = "HAND_RELEASE";
         }
-
-        if (cmd == "STOP")
+        else if (cmd == "STOP")
         {
-            return "HAND_STOP\r\n";
+            action = "HAND_STOP";
+        }
+        else
+        {
+            return "";
         }
 
-        return "";
+        return "SEQ:" +
+               std::to_string(seq) +
+               " CMD:" +
+               action +
+               "\r\n";
     }
 
+    static const char *request_state_to_string(
+        hand_bridge::RequestState state)
+    {
+        using hand_bridge::RequestState;
+
+        switch (state)
+        {
+        case RequestState::QUEUED:
+            return "QUEUED";
+
+        case RequestState::WAITING_ACK:
+            return "WAITING_ACK";
+
+        case RequestState::EXECUTING:
+            return "EXECUTING";
+
+        case RequestState::RETRY_QUEUED:
+            return "RETRY_QUEUED";
+
+        case RequestState::SUCCEEDED:
+            return "SUCCEEDED";
+
+        case RequestState::PREEMPTED:
+            return "PREEMPTED";
+
+        case RequestState::BUSY:
+            return "BUSY";
+
+        case RequestState::ERROR:
+            return "ERROR";
+
+        case RequestState::SUPERSEDED:
+            return "SUPERSEDED";
+
+        case RequestState::RESULT_UNKNOWN:
+            return "RESULT_UNKNOWN";
+
+        default:
+            return "UNKNOWN";
+        }
+    }
 
     void command_callback(
         const std_msgs::msg::String::SharedPtr msg)
@@ -180,73 +218,143 @@ private:
             return;
         }
 
-        current_state_ = msg->data;
-
-        const std::string uart_command =
-            map_to_uart_command(msg->data);
-
-        RCLCPP_INFO(
-            this->get_logger(),
-            "Received command: %s",
-            current_state_.c_str());
-
-        RCLCPP_INFO(
-            this->get_logger(),
-            "Mapped UART command: %s",
-            uart_command.c_str());
-
-        /*
-         * callback只入队，不直接write。
-         */
-        if (uart_fd_ >= 0)
-        {
-            enqueue_uart_command(
-                uart_command);
-        }
-        else
+        if (uart_fd_ < 0)
         {
             RCLCPP_WARN(
                 this->get_logger(),
                 "UART unavailable, command not sent");
-        }
-    }
 
+            return;
+        }
+
+        const std::uint32_t seq =
+            next_seq_.fetch_add(
+                1U,
+                std::memory_order_relaxed);
+
+        if (seq == 0U)
+        {
+            RCLCPP_ERROR(
+                this->get_logger(),
+                "SEQ exhausted");
+
+            return;
+        }
+
+        const bool is_stop =
+            (msg->data == "STOP");
+
+        const std::string frame =
+            map_to_uart_command(msg->data, seq);
+
+        if (frame.empty())
+        {
+            return;
+        }
+
+        {
+            std::lock_guard<std::mutex> lock(ack_mutex_);
+
+            if (is_stop)
+            {
+                retry_policy_.cancel_non_stop();
+            }
+
+            if (!retry_policy_.start(
+                    seq,
+                    frame,
+                    is_stop))
+            {
+                RCLCPP_ERROR(
+                    this->get_logger(),
+                    "Register request failed: seq=%u",
+                    static_cast<unsigned>(seq));
+
+                return;
+            }
+
+            latest_requested_seq_ = seq;
+        }
+
+        if (!enqueue_uart_command(
+                {seq, frame},
+                is_stop))
+        {
+            std::lock_guard<std::mutex> lock(ack_mutex_);
+
+            retry_policy_.mark_send_failed(seq);
+
+            return;
+        }
+
+        RCLCPP_INFO(
+            this->get_logger(),
+            "Queued command=%s seq=%u",
+            msg->data.c_str(),
+            static_cast<unsigned>(seq));
+    }
 
     void status_callback(
         const std::shared_ptr<
             std_srvs::srv::Trigger::Request> request,
-
         std::shared_ptr<
             std_srvs::srv::Trigger::Response> response)
     {
         (void)request;
 
-        response->success = true;
+        std::lock_guard<std::mutex> lock(ack_mutex_);
+
+        const std::uint32_t seq =
+            latest_requested_seq_;
+
+        if (seq == 0)
+        {
+            response->success = false;
+            response->message = "No command submitted";
+            return;
+        }
+
+        const auto *item =
+            retry_policy_.find(seq);
+
+        if (item == nullptr)
+        {
+            response->success = false;
+            response->message = "Request not found";
+            return;
+        }
+
+        response->success =
+            item->state ==
+            hand_bridge::RequestState::SUCCEEDED;
 
         response->message =
-            "current state: " +
-            current_state_;
-
-        RCLCPP_INFO(
-            this->get_logger(),
-            "Status requested: %s",
-            current_state_.c_str());
+            "SEQ:" +
+            std::to_string(seq) +
+            " STATUS:" +
+            request_state_to_string(item->state);
     }
-
 
     bool open_uart()
     {
-        uart_fd_ =
-            ::open(
-                uart_port_.c_str(),
-                O_RDWR | O_NOCTTY);
+        if (baud_rate_ != 115200)
+        {
+            RCLCPP_ERROR(
+                this->get_logger(),
+                "Only 115200 baud is supported");
+
+            return false;
+        }
+
+        uart_fd_ = ::open(
+            uart_port_.c_str(),
+            O_RDWR | O_NOCTTY);
 
         if (uart_fd_ < 0)
         {
             RCLCPP_ERROR(
                 this->get_logger(),
-                "Failed to open UART %s: %s",
-                uart_port_.c_str(),
+                "Open UART failed: %s",
                 std::strerror(errno));
 
             return false;
@@ -254,9 +362,7 @@ private:
 
         struct termios tty {};
 
-        if (tcgetattr(
-                uart_fd_,
-                &tty) != 0)
+        if (tcgetattr(uart_fd_, &tty) != 0)
         {
             RCLCPP_ERROR(
                 this->get_logger(),
@@ -269,67 +375,27 @@ private:
             return false;
         }
 
-        /*
-         * 115200
-         */
-        cfsetispeed(
-            &tty,
-            B115200);
+        cfmakeraw(&tty);
 
-        cfsetospeed(
-            &tty,
-            B115200);
+        if (cfsetispeed(&tty, B115200) != 0 ||
+            cfsetospeed(&tty, B115200) != 0)
+        {
+            ::close(uart_fd_);
+            uart_fd_ = -1;
 
-        /*
-         * 8位数据位
-         */
+            return false;
+        }
+
         tty.c_cflag &= ~CSIZE;
         tty.c_cflag |= CS8;
 
-        /*
-         * N：无校验
-         */
         tty.c_cflag &= ~PARENB;
-
-        /*
-         * 1位停止位
-         */
         tty.c_cflag &= ~CSTOPB;
-
-        /*
-         * 关闭硬件流控
-         */
         tty.c_cflag &= ~CRTSCTS;
 
-        /*
-         * 允许接收
-         * 忽略modem控制线
-         */
-        tty.c_cflag |=
-            CREAD | CLOCAL;
+        tty.c_cflag |= CREAD | CLOCAL;
 
-        /*
-         * raw模式
-         */
-        tty.c_lflag &=
-            ~(ICANON |
-              ECHO |
-              ECHOE |
-              ISIG);
-
-        tty.c_iflag &=
-            ~(IXON |
-              IXOFF |
-              IXANY);
-
-        tty.c_oflag &=
-            ~OPOST;
-
-        /*
-         * RX超时配置
-         */
         tty.c_cc[VMIN] = 0;
-
         tty.c_cc[VTIME] = 5;
 
         if (tcsetattr(
@@ -348,21 +414,17 @@ private:
             return false;
         }
 
-        tcflush(
-            uart_fd_,
-            TCIOFLUSH);
+        tcflush(uart_fd_, TCIOFLUSH);
 
         RCLCPP_INFO(
             this->get_logger(),
-            "UART opened: %s, 115200 8N1",
+            "UART opened: %s",
             uart_port_.c_str());
 
         return true;
     }
 
-
-    bool write_uart(
-        const std::string &data)
+    bool write_uart(const std::string &data)
     {
         if (uart_fd_ < 0)
         {
@@ -371,32 +433,33 @@ private:
 
         std::size_t total_written = 0;
 
-        while (
-            total_written <
-            data.size())
+        while (total_written < data.size())
         {
-            ssize_t ret =
-                ::write(
-                    uart_fd_,
-                    data.data() +
-                        total_written,
-
-                    data.size() -
-                        total_written);
+            const ssize_t ret = ::write(
+                uart_fd_,
+                data.data() + total_written,
+                data.size() - total_written);
 
             if (ret > 0)
             {
                 total_written +=
-                    static_cast<
-                        std::size_t>(ret);
+                    static_cast<std::size_t>(ret);
 
                 continue;
             }
 
-            if (ret < 0 &&
-                errno == EINTR)
+            if (ret < 0 && errno == EINTR)
             {
                 continue;
+            }
+
+            if (ret == 0)
+            {
+                RCLCPP_ERROR(
+                    this->get_logger(),
+                    "UART write returned zero");
+
+                return false;
             }
 
             RCLCPP_ERROR(
@@ -410,127 +473,310 @@ private:
         return true;
     }
 
-
-    void enqueue_uart_command(
-        const std::string &command)
+    bool enqueue_uart_command(
+        const hand_bridge::RetryFrame &frame,
+        bool high_priority = false)
     {
         {
-            std::lock_guard<
-                std::mutex> lock(
-                    queue_mutex_);
+            std::lock_guard<std::mutex> lock(queue_mutex_);
 
-            command_queue_.push(
-                command);
+            if (stop_worker_)
+            {
+                return false;
+            }
+
+            if (high_priority)
+            {
+                command_queue_.push_front(frame);
+            }
+            else
+            {
+                command_queue_.push_back(frame);
+            }
         }
 
         queue_cv_.notify_one();
-    }
 
+        return true;
+    }
 
     void uart_tx_worker()
     {
+        using Clock = hand_bridge::RetryPolicy::Clock;
+
         while (true)
         {
-            std::string command;
+            hand_bridge::RetryFrame frame{};
 
             {
-                std::unique_lock<
-                    std::mutex> lock(
-                        queue_mutex_);
+                std::unique_lock<std::mutex> lock(
+                    queue_mutex_);
 
                 queue_cv_.wait(
                     lock,
                     [this]()
                     {
-                        return
-                            stop_worker_ ||
-                            !command_queue_.empty();
+                        return stop_worker_ ||
+                               !command_queue_.empty();
                     });
 
-                if (stop_worker_ &&
-                    command_queue_.empty())
+                if (stop_worker_)
                 {
                     break;
                 }
 
-                command =
-                    command_queue_.front();
-
-                command_queue_.pop();
+                frame = command_queue_.front();
+                command_queue_.pop_front();
             }
 
-            /*
-             * write放在锁外面。
-             */
-            if (write_uart(command))
+            bool sent = false;
+
+            {
+                std::lock_guard<std::mutex> lock(
+                    ack_mutex_);
+
+                if (!retry_policy_.should_transmit(
+                        frame.seq))
+                {
+                    continue;
+                }
+
+                sent = write_uart(frame.frame);
+
+                if (sent)
+                {
+                    retry_policy_.mark_sent(
+                        frame.seq,
+                        Clock::now());
+                }
+                else
+                {
+                    retry_policy_.mark_send_failed(
+                        frame.seq);
+                }
+            }
+
+            if (sent)
             {
                 RCLCPP_INFO(
                     this->get_logger(),
-                    "UART TX: %s",
-                    command.c_str());
+                    "UART TX seq=%u",
+                    static_cast<unsigned>(frame.seq));
             }
             else
             {
                 RCLCPP_ERROR(
                     this->get_logger(),
-                    "UART TX failed");
+                    "UART TX failed seq=%u",
+                    static_cast<unsigned>(frame.seq));
             }
         }
+
+        RCLCPP_INFO(
+            this->get_logger(),
+            "UART TX worker stopped");
     }
 
+    void uart_rx_worker()
+    {
+        char buffer[128];
 
-    /* ROS参数 */
+        std::string rx_line;
+
+        bool discard_line = false;
+
+        while (!rx_stop_.load())
+        {
+            const ssize_t ret = ::read(
+                uart_fd_,
+                buffer,
+                sizeof(buffer));
+
+            if (ret == 0)
+            {
+                continue;
+            }
+
+            if (ret < 0)
+            {
+                if (errno == EINTR ||
+                    errno == EAGAIN)
+                {
+                    continue;
+                }
+
+                RCLCPP_ERROR(
+                    this->get_logger(),
+                    "UART read failed: %s",
+                    std::strerror(errno));
+
+                break;
+            }
+
+            for (ssize_t i = 0; i < ret; ++i)
+            {
+                const char ch = buffer[i];
+
+                if (ch == '\n')
+                {
+                    if (!discard_line &&
+                        !rx_line.empty())
+                    {
+                        std::uint32_t seq = 0;
+
+                        hand_bridge::AckStatus status =
+                            hand_bridge::AckStatus::ERROR;
+
+                        if (hand_bridge::parse_ack(
+                                rx_line + "\n",
+                                seq,
+                                status))
+                        {
+                            bool accepted = false;
+
+                            {
+                                std::lock_guard<std::mutex> lock(
+                                    ack_mutex_);
+
+                                accepted =
+                                    retry_policy_.on_ack(
+                                        seq,
+                                        status,
+                                        hand_bridge::RetryPolicy::Clock::now());
+                            }
+
+                            if (accepted)
+                            {
+                                RCLCPP_INFO(
+                                    this->get_logger(),
+                                    "UART ACK seq=%u status=%s",
+                                    static_cast<unsigned>(seq),
+                                    hand_bridge::ack_status_to_string(
+                                        status));
+                            }
+                            else
+                            {
+                                RCLCPP_WARN(
+                                    this->get_logger(),
+                                    "Unknown or stale ACK seq=%u",
+                                    static_cast<unsigned>(seq));
+                            }
+                        }
+                        else
+                        {
+                            RCLCPP_WARN(
+                                this->get_logger(),
+                                "Invalid UART line: %s",
+                                rx_line.c_str());
+                        }
+                    }
+
+                    rx_line.clear();
+                    discard_line = false;
+
+                    continue;
+                }
+
+                if (!discard_line)
+                {
+                    if (rx_line.size() < 95U)
+                    {
+                        rx_line.push_back(ch);
+                    }
+                    else
+                    {
+                        rx_line.clear();
+                        discard_line = true;
+                    }
+                }
+            }
+        }
+
+        RCLCPP_INFO(
+            this->get_logger(),
+            "UART RX worker stopped");
+    }
+
+    void retry_worker()
+    {
+        using Clock = hand_bridge::RetryPolicy::Clock;
+
+        while (!retry_stop_.load())
+        {
+            std::vector<hand_bridge::RetryFrame> frames;
+
+            {
+                std::lock_guard<std::mutex> lock(
+                    ack_mutex_);
+
+                frames = retry_policy_.poll(
+                    Clock::now());
+            }
+
+            for (const auto &frame : frames)
+            {
+                if (retry_stop_.load())
+                {
+                    break;
+                }
+
+                RCLCPP_WARN(
+                    this->get_logger(),
+                    "Retry queued seq=%u",
+                    static_cast<unsigned>(frame.seq));
+
+                enqueue_uart_command(frame);
+            }
+
+            std::this_thread::sleep_for(
+                std::chrono::milliseconds(50));
+        }
+
+        RCLCPP_INFO(
+            this->get_logger(),
+            "Retry worker stopped");
+    }
+
     std::string uart_port_;
+    int64_t baud_rate_ = 115200;
 
-    int64_t baud_rate_;
-
-
-    /* 最近收到的ROS命令 */
-    std::string current_state_;
-
-
-    /* UART */
     int uart_fd_ = -1;
 
+    std::atomic<std::uint32_t> next_seq_{1};
 
-    /* TX线程安全队列 */
-    std::queue<std::string>
-        command_queue_;
+    std::uint32_t latest_requested_seq_ = 0;
+
+    std::deque<hand_bridge::RetryFrame> command_queue_;
 
     std::mutex queue_mutex_;
-
-    std::condition_variable
-        queue_cv_;
+    std::condition_variable queue_cv_;
 
     bool stop_worker_ = false;
 
     std::thread tx_thread_;
+    std::thread rx_thread_;
+    std::thread retry_thread_;
 
+    std::atomic<bool> rx_stop_{false};
+    std::atomic<bool> retry_stop_{false};
 
-    /* ROS Topic */
+    std::mutex ack_mutex_;
+
+    hand_bridge::RetryPolicy retry_policy_;
+
     rclcpp::Subscription<
-        std_msgs::msg::String>::SharedPtr
-        command_sub_;
+        std_msgs::msg::String>::SharedPtr command_sub_;
 
-
-    /* ROS Service */
     rclcpp::Service<
-        std_srvs::srv::Trigger>::SharedPtr
-        status_service_;
+        std_srvs::srv::Trigger>::SharedPtr status_service_;
 };
 
-
-int main(
-    int argc,
-    char **argv)
+int main(int argc, char **argv)
 {
-    rclcpp::init(
-        argc,
-        argv);
+    rclcpp::init(argc, argv);
 
     auto node =
-        std::make_shared<
-            HandBridgeNode>();
+        std::make_shared<HandBridgeNode>();
 
     rclcpp::spin(node);
 
